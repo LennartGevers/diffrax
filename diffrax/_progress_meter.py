@@ -1,4 +1,5 @@
 import abc
+import functools
 import importlib.util
 import threading
 from collections.abc import Callable
@@ -181,6 +182,12 @@ class TqdmProgressMeter(AbstractProgressMeter):
     """Uses tqdm to display a progress bar for the solve."""
 
     refresh_steps: int = 20
+    BAR_FORMAT = "{percentage:.2f}%|{bar}| [{elapsed}<{remaining}, {rate_fmt}{postfix}]"
+    tqdm_kwargs: dict[str, Any] = {
+        "total": 100,
+        "unit": "%",
+        "bar_format": BAR_FORMAT,
+    }
 
     def __check_init__(self):
         if importlib.util.find_spec("tqdm") is None:
@@ -190,20 +197,15 @@ class TqdmProgressMeter(AbstractProgressMeter):
             )
 
     @staticmethod
-    def _init_bar() -> "tqdm.tqdm":  # pyright: ignore  # noqa: F821
+    def _init_bar(**kwargs) -> "tqdm.tqdm":  # pyright: ignore  # noqa: F821
         import tqdm  # pyright: ignore
 
-        bar_format = (
-            "{percentage:.2f}%|{bar}| [{elapsed}<{remaining}, {rate_fmt}{postfix}]"
-        )
-        return tqdm.tqdm(
-            total=100,
-            unit="%",
-            bar_format=bar_format,
-        )
+        return tqdm.tqdm(**kwargs)
 
     def init(self) -> _TqdmProgressMeterState:
-        meter_idx = _progress_meter_manager.init(self._init_bar)
+        meter_idx = _progress_meter_manager.init(
+            functools.partial(self._init_bar, **self.tqdm_kwargs)
+        )
         return _TqdmProgressMeterState(meter_idx=meter_idx, step=jnp.array(0))
 
     @staticmethod
