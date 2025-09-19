@@ -3,7 +3,7 @@ import functools
 import importlib.util
 import threading
 from collections.abc import Callable
-from typing import Any, cast, Generic, TypeVar
+from typing import Any, cast, ClassVar, Generic, TypeVar
 
 import equinox as eqx
 import equinox.internal as eqxi
@@ -181,13 +181,19 @@ class _TqdmProgressMeterState(eqx.Module):
 class TqdmProgressMeter(AbstractProgressMeter):
     """Uses tqdm to display a progress bar for the solve."""
 
+    DEFAULT_BAR_FORMAT: ClassVar[
+        str
+    ] = "{percentage:.2f}%|{bar}| [{elapsed}<{remaining}, {rate_fmt}{postfix}]"
+
     refresh_steps: int = 20
-    BAR_FORMAT = "{percentage:.2f}%|{bar}| [{elapsed}<{remaining}, {rate_fmt}{postfix}]"
-    tqdm_kwargs: dict[str, Any] = {
-        "total": 100,
-        "unit": "%",
-        "bar_format": BAR_FORMAT,
-    }
+    tqdm_kwargs: dict[str, Any] = eqx.field(
+        static=True,
+        default={
+            "total": 100,
+            "unit": "%",
+            "bar_format": DEFAULT_BAR_FORMAT,
+        },
+    )
 
     def __check_init__(self):
         if importlib.util.find_spec("tqdm") is None:
